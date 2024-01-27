@@ -1,0 +1,11 @@
+coverage/
+*.tsbuildinfo
+node_modules/
+.DS_Store
+tmp/
+dist/
+.direnv/
+.env
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
