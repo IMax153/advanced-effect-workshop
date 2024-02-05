@@ -19,27 +19,30 @@ const program = Effect.gen(function*(_) {
   )
   // Implementation #1 - Sequential
   yield* _(
-    // Implement an Effect pipeline which continuously takes from the Queue
-    // and calls `doSomeWork` on the taken value. Your implementation should
-    // perform work on each taken value sequentially.
+    Queue.take(queue),
+    Effect.flatMap((n) => doSomeWork(n)),
+    Effect.forever,
     Effect.annotateLogs("concurrency", "none"),
     Effect.fork
   )
   // Implementation #2 - Unbounded Concurrency
   yield* _(
-    // Implement an Effect pipeline which continuously takes from the Queue
-    // and calls `doSomeWork` on the taken value. Your implementation should
-    // perform work on each taken value with unbounded concurrency.
+    Queue.take(queue),
+    Effect.flatMap((n) => Effect.fork(doSomeWork(n))),
+    Effect.forever,
     Effect.annotateLogs("concurrency", "unbounded"),
     Effect.fork
   )
   // Implementation #3 - Bounded Concurrency
   const concurrencyLimit = 4
   yield* _(
-    // Implement an Effect pipeline which continuously takes from the Queue
-    // and calls `doSomeWork` on the taken value. Your implementation should
-    // perform work on each taken value with concurrency bounded to the above
-    // concurrency limit.
+    Queue.take(queue),
+    Effect.flatMap((n) => doSomeWork(n)),
+    Effect.forever,
+    Effect.replicateEffect(concurrencyLimit, {
+      concurrency: "unbounded",
+      discard: true
+    }),
     Effect.annotateLogs("concurrency", "bounded"),
     Effect.fork
   )
