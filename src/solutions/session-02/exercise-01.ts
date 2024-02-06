@@ -1,7 +1,11 @@
 import { Effect, Queue, ReadonlyArray, Schedule } from "effect"
 
+// Exercise Summary:
+//
 // The following exercise will explore how we can distribute work between
-// multiple fibers using Queue.
+// multiple fibers using Queue. We will create three separate implementations
+// of "workers" that take a value from a Queue and perform some work on the
+// value.
 
 // The below function simulates performing some non-trivial work
 const doSomeWork = (value: number) =>

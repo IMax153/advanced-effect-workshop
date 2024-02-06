@@ -1,5 +1,18 @@
-import * as ParcelWatcher from "@parcel/watcher"
-import { Chunk, Console, Data, Effect, Queue, Runtime, Stream } from "effect"
+import type * as ParcelWatcher from "@parcel/watcher"
+import { Chunk, Console, Data, Effect, Stream } from "effect"
+
+// Exercise Summary:
+//
+// The following exercise will explore how we can wrap the `@parcel/watcher`
+// `subscribe` function using Effect. In the default implementation, we will
+// utilize a `Queue` to manage file system events emitted by `@parcel/watcher`.
+//
+// As a bonus, you can attempt a second implementation of wrapping `subscribe`
+// without using a `Queue` (hint: take a look at `Stream.asyncScoped`).
+
+// =============================================================================
+// File Watcher Models
+// =============================================================================
 
 export class FileWatcherError extends Data.TaggedError("FileWatcherError")<{
   readonly error: Error
@@ -16,40 +29,6 @@ export const FileSystemEvent = Data.taggedEnum<FileSystemEvent>()
 export interface FileSystemEventInfo {
   readonly path: string
 }
-
-export const watch = (
-  directory: string,
-  options?: ParcelWatcher.Options
-): Stream.Stream<never, FileWatcherError, FileSystemEvent> =>
-  Effect.gen(function*(_) {
-    const runtime = yield* _(Effect.runtime<never>())
-    const runFork = Runtime.runFork(runtime)
-
-    const queue = yield* _(Effect.acquireRelease(
-      Queue.unbounded<Effect.Effect<never, FileWatcherError, Chunk.Chunk<FileSystemEvent>>>(),
-      (queue) => Queue.shutdown(queue)
-    ))
-
-    const handleSubscription = (
-      error: Error | null,
-      events: ReadonlyArray<ParcelWatcher.Event>
-    ) => {
-      if (error) {
-        const failure = Effect.fail(new FileWatcherError({ error }))
-        runFork(Queue.offer(queue, failure))
-      } else {
-        const normalizedEvents = Effect.succeed(normalizeEvents(events))
-        runFork(Queue.offer(queue, normalizedEvents))
-      }
-    }
-
-    yield* _(Effect.acquireRelease(
-      Effect.promise(() => ParcelWatcher.subscribe(directory, handleSubscription, options)),
-      (subscription) => Effect.promise(() => subscription.unsubscribe())
-    ))
-
-    return Stream.repeatEffectChunk(Effect.flatten(Queue.take(queue)))
-  }).pipe(Stream.unwrapScoped)
 
 const normalizeEvents = (
   events: ReadonlyArray<ParcelWatcher.Event>
@@ -70,27 +49,28 @@ const normalizeEvent = (event: ParcelWatcher.Event) => {
   }
 }
 
-export const watchStream = (
+// =============================================================================
+// File Watcher Methods
+// =============================================================================
+
+export const watch = (
   directory: string,
   options?: ParcelWatcher.Options
 ): Stream.Stream<never, FileWatcherError, FileSystemEvent> =>
-  Stream.asyncScoped<never, FileWatcherError, FileSystemEvent>((emit) =>
-    Effect.acquireRelease(
-      Effect.promise(() =>
-        ParcelWatcher.subscribe(directory, (error, events) => {
-          if (error) {
-            emit.fail(new FileWatcherError({ error }))
-          } else {
-            emit.chunk(normalizeEvents(events))
-          }
-        }, options)
-      ),
-      (subscription) => Effect.promise(() => subscription.unsubscribe())
-    )
-  )
+  // Complete the implementation of `watch`. Your implementation should:
+  //   - Properly manage the subscription resource returned from `ParcelWatcher.subscribe`
+  //   - Write file system events emitted by the subscription into a `Queue`
+  //   - Starve the queue using a `Stream`
 
 watch("./src").pipe(
   Stream.tap((event) => Console.log(event)),
   Stream.runDrain,
   Effect.runFork
 )
+
+// Bonus Exercise:
+//   - Implement the same functionality as above without using `Queue`
+// export const watchStream = (
+//   directory: string,
+//   options?: ParcelWatcher.Options
+// ): Stream.Stream<never, FileWatcherError, FileSystemEvent> =>

@@ -1,0 +1,60 @@
+tasks:
+  - name: Setup Nix Environment
+    init: |
+      set -x
+
+      NIX_BACKUP_DIR="/workspace/nix-backup"
+      NIX_BACKUP_FILE="$NIX_BACKUP_DIR/result.closure.lz4"
+
+      prebuild_pnpm () {
+        echo "Prebuilding pnpm..."
+        direnv exec . pnpm install
+      }
+
+      date_str () {
+        date +%Y-%m-%d_%H:%M:%S
+      }
+
+      prebuild_main () {
+        mkdir -p $NIX_BACKUP_DIR
+
+        # This runs when the IDE starts without a previous prebuild
+        if [ -z "$GITPOD_HEADLESS" ]; then
+          echo "No prebuild detected - preparing Nix flake now: $(date)"
+
+          # Needed to load flake into env
+          export GITPOD_PREBUILD_LOAD_NIX_FLAKE=1
+
+          direnv allow
+
+          # Force flake evaluation
+          nix print-dev-env >/dev/null
+
+        # This runs during prebuild
+        else
+          echo "Prebuild nix flake: $(date)"
+
+          nix-env -i lz4
+
+          # Needed to load flake into env
+          export GITPOD_PREBUILD_LOAD_NIX_FLAKE=1
+          direnv allow
+
+          nix print-dev-env >/dev/null --profile $NIX_BACKUP_DIR/out
+          NIX_FLAKE_PATHS=$(nix path-info -r $NIX_BACKUP_DIR/out)
+          nix-store --export $NIX_FLAKE_PATHS | lz4 > $NIX_BACKUP_DIR/result.closure.lz4
+        fi
+
+        ls -la $NIX_BACKUP_DIR
+
+        prebuild_web 2>&1 | tee $NIX_BACKUP_DIR/prebuild_pnpm-$(date_str).log &
+
+        wait
+
+        echo "Done: $(date)"
+      }
+
+      prebuild_main 2>&1 | tee $NIX_BACKUP_DIR/prebuild_main-$(date_str).log
+
+      # NOTE always end with a succcesful exit code so the prebuild is being used
+      exit 0

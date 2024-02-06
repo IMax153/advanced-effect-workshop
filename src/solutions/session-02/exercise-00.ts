@@ -16,8 +16,24 @@ const program = Effect.gen(function*(_) {
   const deferred = yield* _(Deferred.make<string, number>())
   yield* _(
     maybeFail,
-    // Implement the logic to propagate the full result of `maybeFail` back to
-    // the parent fiber utilizing the Deferred without `Effect.intoDeferred`.
+    Effect.matchEffect({
+      onFailure: (error) => Deferred.fail(deferred, error),
+      onSuccess: (value) => Deferred.succeed(deferred, value)
+    }),
+    //
+    // Alternatively, you could use the exit value of `maybeFail`:
+    // Effect.exit,
+    // Effect.flatMap((exit) => Deferred.complete(deferred, exit)),
+    //
+    // Simulating interruption:
+    // Effect.delay("1 seconds"),
+    // Effect.raceFirst(Effect.interrupt),
+    //
+    Effect.onInterrupt(() =>
+      Effect.log("Interrupted!").pipe(
+        Effect.zipRight(Deferred.interrupt(deferred))
+      )
+    ),
     Effect.fork
   )
   const result = yield* _(Deferred.await(deferred))
