@@ -6,7 +6,9 @@ import express from "express"
 // In this session project, we will build a simple Express REST API server that
 // performs CRUD operations against a `TodoRepository`. The implementations of
 // the `Todo` models, the `TodoRepository`, and the `Express` service have already
-// been provided for you. This project will be divided into three stages:
+// been provided for you.
+//
+// This project will be divided into three stages:
 //
 // Stage 1:
 //

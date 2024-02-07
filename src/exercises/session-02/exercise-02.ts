@@ -3,10 +3,10 @@ import { Deferred, Effect, Fiber, Queue, ReadonlyArray } from "effect"
 // Exercise Summary:
 //
 // The following exercise will explore how we can distribute work between
-// multiple fibers using Queue and gain access to the results of said work
-// with Deferred. Our sample program will setup a classic producer / consumer
-// relationship. Once completed we can tweak the concurrency of our program to
-// demonstrate the flexibility of this pattern.
+// multiple fibers using `Queue` and retrieve the result of said work for further
+// processing via `Deferred`. Our sample program will setup a classic producer /
+// consumer relationship between fibers. Once completed we can tweak the
+// concurrency of our program to demonstrate the flexibility of this pattern.
 
 // The below function simulates performing some non-trivial work
 const performWork = (value: number) =>
@@ -22,7 +22,7 @@ const program = Effect.gen(function*(_) {
   const produceWork = (value: number): Effect.Effect<never, never, string> =>
     // Complete the implementation of `produceWork`. Your implementation should:
     //   - Offer entries of work into the Queue
-    //   - Await the result of said work
+    //   - Wait for the result of the work to be available
 
   const consumeWork: Effect.Effect<never, never, void> =
     // Complete the implementation of `consumeWork`. Your implementation should:
