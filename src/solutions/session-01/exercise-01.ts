@@ -1,6 +1,20 @@
 import { Console, Data, Effect, Random, Schedule, Stream } from "effect"
 import { EventEmitter } from "node:events"
 
+const captureEvents = (
+  emitter: EventEmitter,
+  eventName: string
+): Stream.Stream<Event, EmissionError> =>
+  Stream.async<Event, EmissionError>((emit) => {
+    emitter.on(eventName, (error: EmissionError | null, value: Event) => {
+      if (error) {
+        emit.fail(error)
+      } else {
+        emit.single(value)
+      }
+    })
+  })
+
 // =============================================================================
 // Event Emitter
 // =============================================================================
@@ -31,24 +45,6 @@ const emitEvents = (emitter: EventEmitter, eventName: string, eventCount: number
       )
     )
   )
-
-// =============================================================================
-// Exercise
-// =============================================================================
-
-const captureEvents = (
-  emitter: EventEmitter,
-  eventName: string
-): Stream.Stream<never, EmissionError, Event> =>
-  Stream.async<never, EmissionError, Event>((emit) => {
-    emitter.on(eventName, (error: EmissionError | null, value: Event) => {
-      if (error) {
-        emit.fail(error)
-      } else {
-        emit.single(value)
-      }
-    })
-  })
 
 const program = Effect.gen(function*(_) {
   const emitter = yield* _(Effect.sync(() => new EventEmitter()))

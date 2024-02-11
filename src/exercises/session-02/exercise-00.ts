@@ -13,7 +13,7 @@ const maybeFail = Random.next.pipe(Effect.filterOrFail(
 ))
 
 const program = Effect.gen(function*(_) {
-  const deferred = yield* _(Deferred.make<string, number>())
+  const deferred = yield* _(Deferred.make<number, string>())
   yield* _(
     maybeFail,
     // Implement the logic to propagate the full result of `maybeFail` back to

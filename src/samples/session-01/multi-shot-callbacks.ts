@@ -5,10 +5,9 @@ import type { EventEmitter } from "node:events"
 // Multi-Shot Callbacks
 // =============================================================================
 
-declare const emitter: EventEmitter
-
-Stream.async<never, never, unknown>((emit) => {
-  emitter.on("my-event", (data) => {
-    emit.single(data)
+export const captureEvents = (emitter: EventEmitter, eventName: string) =>
+  Stream.async<never, never, unknown>((emit) => {
+    emitter.on(eventName, (data) => {
+      emit.single(data)
+    })
   })
-})

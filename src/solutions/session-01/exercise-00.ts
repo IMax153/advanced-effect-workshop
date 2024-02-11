@@ -2,8 +2,8 @@ import { Effect } from "effect"
 
 export const MAX_SET_TIMEOUT_MILLIS = 2 ** 31 - 1
 
-const sleep = (millis: number): Effect.Effect<never, never, void> =>
-  Effect.async<never, never, void>((resume) => {
+const sleep = (millis: number): Effect.Effect<void> =>
+  Effect.async<void>((resume) => {
     const timeoutId = setTimeout(() => {
       resume(Effect.unit)
     }, Math.min(millis, MAX_SET_TIMEOUT_MILLIS))

@@ -9,6 +9,14 @@ import { EventEmitter } from "node:events"
 // and captures both the errors and values emitted by the `EventEmitter`'s
 // `"emission"` event.
 
+declare const captureEvents: (
+  emitter: EventEmitter,
+  eventName: string
+) => Stream.Stream<Event, EmissionError>
+// Complete the implementation of the `captureEvents` method. Your implementation should:
+//   - Handle pushing successful `Event` emissions to the stream
+//   - Failing the stream if an `EmissionError` is emitted
+
 // =============================================================================
 // Event Emitter
 // =============================================================================
@@ -41,14 +49,6 @@ const emitEvents = (emitter: EventEmitter, eventName: string, eventCount: number
       )
     )
   )
-
-const captureEvents = (
-  emitter: EventEmitter,
-  eventName: string
-): Stream.Stream<never, EmissionError, Event> =>
-  // Complete the implementation of the `captureEvents` method. Your implementation should:
-  //   - Handle pushing successful `Event` emissions to the stream
-  //   - Failing the stream if an `EmissionError` is emitted
 
 const program = Effect.gen(function*(_) {
   const emitter = yield* _(Effect.sync(() => new EventEmitter()))

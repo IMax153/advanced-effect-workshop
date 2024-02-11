@@ -8,7 +8,7 @@ import { Effect, Queue, ReadonlyArray, Schedule } from "effect"
 // value.
 
 // The below function simulates performing some non-trivial work
-const doSomeWork = (value: number) =>
+export const doSomeWork = (value: number) =>
   Effect.log(`Consuming value '${value}'`).pipe(
     Effect.delay("20 millis")
   )
@@ -23,6 +23,7 @@ const program = Effect.gen(function*(_) {
   )
   // Implementation #1 - Sequential
   yield* _(
+    Effect.unit, // Remove me
     // Implement an Effect pipeline which continuously takes from the Queue
     // and calls `doSomeWork` on the taken value. Your implementation should
     // perform work on each taken value sequentially.
@@ -31,6 +32,7 @@ const program = Effect.gen(function*(_) {
   )
   // Implementation #2 - Unbounded Concurrency
   yield* _(
+    Effect.unit, // Remove me
     // Implement an Effect pipeline which continuously takes from the Queue
     // and calls `doSomeWork` on the taken value. Your implementation should
     // perform work on each taken value with unbounded concurrency.
@@ -40,6 +42,7 @@ const program = Effect.gen(function*(_) {
   // Implementation #3 - Bounded Concurrency
   const concurrencyLimit = 4
   yield* _(
+    Effect.unit, // Remove me
     // Implement an Effect pipeline which continuously takes from the Queue
     // and calls `doSomeWork` on the taken value. Your implementation should
     // perform work on each taken value with concurrency bounded to the above

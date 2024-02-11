@@ -23,20 +23,41 @@ import type * as NodeNet from "node:net"
 // Express Integration
 // =============================================================================
 
-export interface Express {
-  readonly _: unique symbol
-}
-
-export const Express = Context.Tag<
+class Express extends Context.Tag("Express")<
   Express,
   Effect.Effect.Success<ReturnType<typeof makeExpress>>
->("Express")
+>() {
+  static Live(
+    hostname: string,
+    port: number
+  ): Layer.Layer<Express, never, never>
+  static Live<R>(
+    hostname: string,
+    port: number,
+    exitHandler: (
+      req: express.Request,
+      res: express.Response,
+      next: express.NextFunction
+    ) => (cause: Cause.Cause<never>) => Effect.Effect<void, never, R>
+  ): Layer.Layer<Express, never, R>
+  static Live<R>(
+    hostname: string,
+    port: number,
+    exitHandler?: (
+      req: express.Request,
+      res: express.Response,
+      next: express.NextFunction
+    ) => (cause: Cause.Cause<never>) => Effect.Effect<void, never, R>
+  ): Layer.Layer<Express, never, R> {
+    return Layer.scoped(Express, makeExpress(hostname, port, exitHandler ?? defaultExitHandler))
+  }
+}
 
 export type ExitHandler<R> = (
   req: express.Request,
   res: express.Response,
   next: express.NextFunction
-) => (cause: Cause.Cause<never>) => Effect.Effect<R, never, void>
+) => (cause: Cause.Cause<never>) => Effect.Effect<void, never, R>
 
 export class ServerError extends Data.TaggedError("ServerError")<{
   readonly method: ServerMethod
@@ -64,7 +85,7 @@ export const makeExpress = <R>(
 
     // Create the Express Server
     const connections = new Set<NodeNet.Socket>()
-    const openServer = Effect.async<never, never, NodeHttp.Server>((resume) => {
+    const openServer = Effect.async<NodeHttp.Server>((resume) => {
       const onError = (error: Error) => {
         resume(Effect.die(new ServerError({ method: "listen", error })))
       }
@@ -83,7 +104,7 @@ export const makeExpress = <R>(
       })
     })
     const closeServer = (server: NodeHttp.Server) =>
-      Effect.async<never, never, void>((resume) => {
+      Effect.async<void>((resume) => {
         connections.forEach((connection) => {
           connection.end()
           connection.destroy()
@@ -118,7 +139,7 @@ export const makeExpress = <R>(
           {
             [k in keyof Handlers]: [Handlers[k]] extends [
               EffectRequestHandler<infer R, any, any, any, any, any>
-            ] ? Effect.Effect<R, never, void>
+            ] ? Effect.Effect<void, never, R>
               : never
           }[number]
         >
@@ -142,46 +163,21 @@ export const makeExpress = <R>(
     }
   })
 
-export const withExpressApp = <R, E, A>(f: (app: express.Express) => Effect.Effect<R, E, A>) =>
+export const withExpressApp = <A, E, R>(f: (app: express.Express) => Effect.Effect<A, E, R>) =>
   Express.pipe(Effect.flatMap(({ app }) => f(app)))
 
-export const withExpressServer = <R, E, A>(
-  f: (server: NodeHttp.Server) => Effect.Effect<R, E, A>
+export const withExpressServer = <A, E, R>(
+  f: (server: NodeHttp.Server) => Effect.Effect<A, E, R>
 ) => Express.pipe(Effect.flatMap(({ server }) => f(server)))
 
 export const withExpressRuntime = Effect.serviceFunctionEffect(Express, ({ runtime }) => runtime)
 
 export const defaultExitHandler =
   (_: express.Request, res: express.Response, _next: express.NextFunction) =>
-  (cause: Cause.Cause<never>): Effect.Effect<never, never, void> =>
+  (cause: Cause.Cause<never>): Effect.Effect<void> =>
     Cause.isDie(cause)
       ? Effect.logError(cause)
       : Effect.sync(() => res.status(500).end())
-
-export function ExpressLive(
-  hostname: string,
-  port: number
-): Layer.Layer<never, never, Express>
-export function ExpressLive<R>(
-  hostname: string,
-  port: number,
-  exitHandler: (
-    req: express.Request,
-    res: express.Response,
-    next: express.NextFunction
-  ) => (cause: Cause.Cause<never>) => Effect.Effect<R, never, void>
-): Layer.Layer<R, never, Express>
-export function ExpressLive<R>(
-  hostname: string,
-  port: number,
-  exitHandler?: (
-    req: express.Request,
-    res: express.Response,
-    next: express.NextFunction
-  ) => (cause: Cause.Cause<never>) => Effect.Effect<R, never, void>
-): Layer.Layer<R, never, Express> {
-  return Layer.scoped(Express, makeExpress(hostname, port, exitHandler ?? defaultExitHandler))
-}
 
 export const methods = [
   "all",
@@ -217,10 +213,6 @@ export type Methods = typeof methods[number]
 
 export type PathParams = string | RegExp | Array<string | RegExp>
 
-export interface Express {
-  readonly _: unique symbol
-}
-
 export interface ParamsDictionary {
   [key: string]: string
 }
@@ -241,7 +233,7 @@ export interface EffectRequestHandler<
     req: express.Request<P, ResBody, ReqBody, ReqQuery, Locals>,
     res: express.Response<ResBody, Locals>,
     next: express.NextFunction
-  ): Effect.Effect<R, never, void>
+  ): Effect.Effect<void, never, R>
 }
 
 const match = (method: Methods) =>
@@ -250,17 +242,17 @@ const match = (method: Methods) =>
     EffectRequestHandler<any, any, any, any, any, any>
   >
 >(path: PathParams, ...handlers: Handlers): Effect.Effect<
+  void,
+  never,
   | Express
   | Effect.Effect.Context<
     {
       [k in keyof Handlers]: [Handlers[k]] extends [
         EffectRequestHandler<infer R, any, any, any, any, any>
-      ] ? Effect.Effect<R, never, void>
+      ] ? Effect.Effect<void, never, R>
         : never
     }[number]
-  >,
-  never,
-  void
+  >
 > =>
   withExpressRuntime(handlers).pipe(
     Effect.flatMap((handlers) =>
@@ -308,17 +300,17 @@ export function use<
 >(
   ...handlers: Handlers
 ): Effect.Effect<
+  void,
+  never,
   | Express
   | Effect.Effect.Context<
     {
       [k in keyof Handlers]: [Handlers[k]] extends [
         EffectRequestHandler<infer R, any, any, any, any, any>
-      ] ? Effect.Effect<R, never, void>
+      ] ? Effect.Effect<void, never, R>
         : never
     }[number]
-  >,
-  never,
-  void
+  >
 >
 export function use<
   Handlers extends ReadonlyArray.NonEmptyReadonlyArray<
@@ -328,19 +320,19 @@ export function use<
   path: PathParams,
   ...handlers: Handlers
 ): Effect.Effect<
+  void,
+  never,
   | Express
   | Effect.Effect.Context<
     {
       [k in keyof Handlers]: [Handlers[k]] extends [
         EffectRequestHandler<infer R, any, any, any, any, any>
-      ] ? Effect.Effect<R, never, void>
+      ] ? Effect.Effect<void, never, R>
         : never
     }[number]
-  >,
-  never,
-  void
+  >
 >
-export function use(...args: Array<any>): Effect.Effect<Express, never, void> {
+export function use(...args: Array<any>): Effect.Effect<void, never, Express> {
   return withExpressApp((app) => {
     if (typeof args[0] === "function") {
       return withExpressRuntime(
@@ -382,14 +374,14 @@ const makeTodoRepository = Effect.gen(function*(_) {
   const nextIdRef = yield* _(Ref.make(0))
   const todosRef = yield* _(Ref.make(HashMap.empty<number, Todo>()))
 
-  const getTodo = (id: number): Effect.Effect<never, never, Option.Option<Todo>> =>
+  const getTodo = (id: number): Effect.Effect<Option.Option<Todo>, never, never> =>
     Ref.get(todosRef).pipe(Effect.map(HashMap.get(id)))
 
-  const getTodos: Effect.Effect<never, never, ReadonlyArray<Todo>> = Ref.get(todosRef).pipe(
+  const getTodos: Effect.Effect<ReadonlyArray<Todo>, never, never> = Ref.get(todosRef).pipe(
     Effect.map((map) => ReadonlyArray.fromIterable(HashMap.values(map)))
   )
 
-  const createTodo = (params: CreateTodoParams): Effect.Effect<never, never, number> =>
+  const createTodo = (params: CreateTodoParams): Effect.Effect<number, never, never> =>
     Ref.getAndUpdate(nextIdRef, (n) => n + 1).pipe(
       Effect.flatMap((id) =>
         Ref.modify(todosRef, (map) => {
@@ -403,7 +395,7 @@ const makeTodoRepository = Effect.gen(function*(_) {
   const updateTodo = (
     id: number,
     params: UpdateTodoParams
-  ): Effect.Effect<never, Cause.NoSuchElementException, Todo> =>
+  ): Effect.Effect<Todo, Cause.NoSuchElementException, never> =>
     Ref.get(todosRef).pipe(Effect.flatMap((map) => {
       const maybeTodo = HashMap.get(map, id)
       if (Option.isNone(maybeTodo)) {
@@ -414,7 +406,7 @@ const makeTodoRepository = Effect.gen(function*(_) {
       return Ref.set(todosRef, updated).pipe(Effect.as(newTodo))
     }))
 
-  const deleteTodo = (id: number): Effect.Effect<never, never, boolean> =>
+  const deleteTodo = (id: number): Effect.Effect<boolean, never, never> =>
     Ref.get(todosRef).pipe(Effect.flatMap((map) =>
       HashMap.has(map, id)
         ? Ref.set(todosRef, HashMap.remove(map, id)).pipe(Effect.as(true))
@@ -430,16 +422,12 @@ const makeTodoRepository = Effect.gen(function*(_) {
   } as const
 })
 
-interface TodoRepository {
-  readonly _: unique symbol
-}
-
-const TodoRepository = Context.Tag<
+class TodoRepository extends Context.Tag("TodoRepository")<
   TodoRepository,
   Effect.Effect.Success<typeof makeTodoRepository>
->()
-
-const TodoRepositoryLive = Layer.effect(TodoRepository, makeTodoRepository)
+>() {
+  static readonly Live = Layer.effect(TodoRepository, makeTodoRepository)
+}
 
 // =============================================================================
 // Application
@@ -508,8 +496,8 @@ const server = Effect.all([
   })
 ])
 
-const MainLive = ExpressLive("127.0.0.1", 3001).pipe(
-  Layer.merge(TodoRepositoryLive)
+const MainLive = Express.Live("127.0.0.1", 8888).pipe(
+  Layer.merge(TodoRepository.Live)
 )
 
 server.pipe(
@@ -517,20 +505,3 @@ server.pipe(
   Effect.provide(MainLive),
   Effect.runFork
 )
-
-// Some useful cURL commands for testing your server:
-//
-// Query a Todo by ID:
-//   curl -X GET http://localhost:3001/todos/0
-//
-// Query all Todos:
-//   curl -X GET http://localhost:3001/todos
-//
-// Create a Todo:
-//   curl -X POST -H 'Content-Type: application/json' -d '{"title":"mytodo","completed":false}' http://localhost:3001/todos
-//
-// Update a Todo:
-//   curl -X PUT -H 'Content-Type: application/json' -d '{"completed":true}' http://localhost:3001/todos/0
-//
-// Delete a Todo by ID:
-//   curl -X DELETE http://localhost:3001/todos/0

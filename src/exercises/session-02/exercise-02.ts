@@ -1,4 +1,5 @@
-import { Deferred, Effect, Fiber, Queue, ReadonlyArray } from "effect"
+import type { Deferred } from "effect"
+import { Effect, Fiber, Queue, ReadonlyArray } from "effect"
 
 // Exercise Summary:
 //
@@ -9,7 +10,7 @@ import { Deferred, Effect, Fiber, Queue, ReadonlyArray } from "effect"
 // concurrency of our program to demonstrate the flexibility of this pattern.
 
 // The below function simulates performing some non-trivial work
-const performWork = (value: number) =>
+export const performWork = (value: number) =>
   Effect.log(`Consuming value: '${value}'`).pipe(
     Effect.delay("20 millis"),
     Effect.as(`Processed value: '${value}'`)
@@ -17,19 +18,20 @@ const performWork = (value: number) =>
 
 const program = Effect.gen(function*(_) {
   // Our queue will contain pairs of (number, Deferred)
-  const queue = yield* _(Queue.unbounded<[number, Deferred.Deferred<never, string>]>())
+  const queue = yield* _(Queue.unbounded<[number, Deferred.Deferred<string, string>]>())
 
-  const produceWork = (value: number): Effect.Effect<never, never, string> =>
-    // Complete the implementation of `produceWork`. Your implementation should:
-    //   - Offer entries of work into the Queue
-    //   - Wait for the result of the work to be available
+  const produceWork = (value: number): Effect.Effect<string> =>
+    Effect.succeed("Remove me")
+  // Complete the implementation of `produceWork`. Your implementation should:
+  //   - Offer entries of work into the Queue
+  //   - Wait for the result of the work to be available
 
-  const consumeWork: Effect.Effect<never, never, void> =
-    // Complete the implementation of `consumeWork`. Your implementation should:
-    //   - Take entries of work from the Queue
-    //   - Utilize `performWork` to perform some work on the value taken from the Queue
-    //   - Communicate the result of `performWork` back to the producer
-    //   - Work should be consumed continuously and with unbounded concurrency
+  const consumeWork: Effect.Effect<void> = Effect.unit // Remove me
+  // Complete the implementation of `consumeWork`. Your implementation should:
+  //   - Take entries of work from the Queue
+  //   - Utilize `performWork` to perform some work on the value taken from the Queue
+  //   - Communicate the result of `performWork` back to the producer
+  //   - Work should be consumed continuously and with unbounded concurrency
 
   // The following fiber utilizes `consumeWork` to take entries from the Queue,
   // perform some work on the taken value, and communicate the result of the

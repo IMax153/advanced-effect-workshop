@@ -8,10 +8,10 @@ const performWork = (value: number) =>
   )
 
 const program = Effect.gen(function*(_) {
-  const queue = yield* _(Queue.unbounded<[number, Deferred.Deferred<never, string>]>())
+  const queue = yield* _(Queue.unbounded<[number, Deferred.Deferred<string>]>())
 
-  const produceWork = (value: number): Effect.Effect<never, never, string> =>
-    Deferred.make<never, string>().pipe(
+  const produceWork = (value: number): Effect.Effect<string> =>
+    Deferred.make<string>().pipe(
       Effect.flatMap((deferred) =>
         Queue.offer(queue, [value, deferred]).pipe(
           Effect.zipRight(Deferred.await(deferred)),
@@ -24,7 +24,7 @@ const program = Effect.gen(function*(_) {
       )
     )
 
-  const consumeWork: Effect.Effect<never, never, void> = Queue.take(queue).pipe(
+  const consumeWork: Effect.Effect<void> = Queue.take(queue).pipe(
     Effect.flatMap(([value, deferred]) =>
       Effect.if(Deferred.isDone(deferred), {
         onTrue: Effect.unit,

@@ -10,6 +10,28 @@ import { Chunk, Console, Data, Effect, Stream } from "effect"
 // As a bonus, you can attempt a second implementation of wrapping `subscribe`
 // without using a `Queue` (hint: take a look at `Stream.asyncScoped`).
 
+declare const watch: (
+  directory: string,
+  options?: ParcelWatcher.Options
+) => Stream.Stream<never, FileWatcherError, FileSystemEvent>
+// Complete the implementation of `watch`. Your implementation should:
+//   - Properly manage the subscription resource returned from `ParcelWatcher.subscribe`
+//   - Write file system events emitted by the subscription into a `Queue`
+//   - Starve the queue using a `Stream`
+
+watch("./src").pipe(
+  Stream.tap((event) => Console.log(event)),
+  Stream.runDrain,
+  Effect.runFork
+)
+
+// Bonus Exercise:
+//   - Implement the same functionality as above without using `Queue`
+// declare const watchStream: (
+//   directory: string,
+//   options?: ParcelWatcher.Options
+// ) => Stream.Stream<never, FileWatcherError, FileSystemEvent> =>
+
 // =============================================================================
 // File Watcher Models
 // =============================================================================
@@ -48,29 +70,3 @@ const normalizeEvent = (event: ParcelWatcher.Event) => {
     }
   }
 }
-
-// =============================================================================
-// File Watcher Methods
-// =============================================================================
-
-export const watch = (
-  directory: string,
-  options?: ParcelWatcher.Options
-): Stream.Stream<never, FileWatcherError, FileSystemEvent> =>
-  // Complete the implementation of `watch`. Your implementation should:
-  //   - Properly manage the subscription resource returned from `ParcelWatcher.subscribe`
-  //   - Write file system events emitted by the subscription into a `Queue`
-  //   - Starve the queue using a `Stream`
-
-watch("./src").pipe(
-  Stream.tap((event) => Console.log(event)),
-  Stream.runDrain,
-  Effect.runFork
-)
-
-// Bonus Exercise:
-//   - Implement the same functionality as above without using `Queue`
-// export const watchStream = (
-//   directory: string,
-//   options?: ParcelWatcher.Options
-// ): Stream.Stream<never, FileWatcherError, FileSystemEvent> =>

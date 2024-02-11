@@ -2,7 +2,7 @@ import type { Duration, Scope } from "effect"
 import { Context, Deferred, Effect, Fiber, Layer, Option, Queue, Ref } from "effect"
 
 export interface RateLimiter {
-  readonly take: Effect.Effect<never, never, void>
+  readonly take: Effect.Effect<void>
 }
 
 export declare namespace RateLimiter {
@@ -10,13 +10,13 @@ export declare namespace RateLimiter {
     readonly make: (
       limit: number,
       window: Duration.DurationInput
-    ) => Effect.Effect<Scope.Scope, never, RateLimiter>
+    ) => Effect.Effect<RateLimiter, never, Scope.Scope>
   }
 }
 
-export const Factory = Context.Tag<RateLimiter.Factory>()
-
-export const FactoryLive = Layer.sync(Factory, () => factory)
+class Factory extends Context.Tag("RateLimiter.Factory")<Factory, RateLimiter.Factory>() {
+  static readonly Live = Layer.sync(Factory, () => factory)
+}
 
 export const make = Effect.serviceFunctionEffect(Factory, (factory) => factory.make)
 
@@ -27,12 +27,12 @@ const factory = Factory.of({
       const scope = yield* _(Effect.scope)
 
       const queue = yield* _(Effect.acquireRelease(
-        Queue.unbounded<Deferred.Deferred<never, void>>(),
+        Queue.unbounded<Deferred.Deferred<void>>(),
         (queue) => Queue.shutdown(queue)
       ))
 
       const reset = Effect.delay(Ref.set(counter, limit), window)
-      const resetRef = yield* _(Ref.make(Option.none<Fiber.RuntimeFiber<never, void>>()))
+      const resetRef = yield* _(Ref.make(Option.none<Fiber.RuntimeFiber<void>>()))
       const maybeReset = Ref.get(resetRef).pipe(
         Effect.tap(Option.match({
           onNone: () =>
@@ -71,7 +71,7 @@ const factory = Factory.of({
       yield* _(Effect.forkIn(worker, scope))
 
       return {
-        take: Deferred.make<never, void>().pipe(
+        take: Deferred.make<void>().pipe(
           Effect.tap((deferred) => Queue.offer(queue, deferred)),
           Effect.flatMap((deferred) =>
             Deferred.await(deferred).pipe(

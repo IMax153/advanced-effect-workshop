@@ -49,101 +49,36 @@ import express from "express"
 // Bonus:
 //   - Use a `FiberSet` instead of `Runtime` to run Effects within your Express
 //     request handlers
+//
+// Some useful cURL commands for testing your server (modify the port as applicable):
+//
+// Query a Todo by ID:
+//   curl -X GET http://localhost:8888/todos/0
+//
+// Query all Todos:
+//   curl -X GET http://localhost:8888/todos
+//
+// Create a Todo:
+//   curl -X POST -H 'Content-Type: application/json' -d '{"title":"mytodo","completed":false}' http://localhost:8888/todos
+//
+// Update a Todo:
+//   curl -X PUT -H 'Content-Type: application/json' -d '{"completed":true}' http://localhost:8888/todos/0
+//
+// Delete a Todo by ID:
+//   curl -X DELETE http://localhost:8888/todos/0
 
 // =============================================================================
-// Todo
+// Server
 // =============================================================================
 
-class Todo extends Schema.Class<Todo>()({
-  id: Schema.number,
-  title: Schema.string,
-  completed: Schema.boolean
-}) {}
-
-const CreateTodoParams = Todo.struct.pipe(Schema.omit("id"))
-type CreateTodoParams = Schema.Schema.To<typeof CreateTodoParams>
-
-const UpdateTodoParams = Todo.struct.pipe(Schema.omit("id"), Schema.partial)
-type UpdateTodoParams = Schema.Schema.To<typeof UpdateTodoParams>
-
-// =============================================================================
-// TodoRepository
-// =============================================================================
-
-const makeTodoRepository = Effect.gen(function*(_) {
-  const nextIdRef = yield* _(Ref.make(0))
-  const todosRef = yield* _(Ref.make(HashMap.empty<number, Todo>()))
-
-  const getTodo = (id: number): Effect.Effect<never, never, Option.Option<Todo>> =>
-    Ref.get(todosRef).pipe(Effect.map(HashMap.get(id)))
-
-  const getTodos: Effect.Effect<never, never, ReadonlyArray<Todo>> = Ref.get(todosRef).pipe(
-    Effect.map((map) => ReadonlyArray.fromIterable(HashMap.values(map)))
-  )
-
-  const createTodo = (params: CreateTodoParams): Effect.Effect<never, never, number> =>
-    Ref.getAndUpdate(nextIdRef, (n) => n + 1).pipe(
-      Effect.flatMap((id) =>
-        Ref.modify(todosRef, (map) => {
-          const newTodo = new Todo({ ...params, id })
-          const updated = HashMap.set(map, newTodo.id, newTodo)
-          return [newTodo.id, updated]
-        })
-      )
-    )
-
-  const updateTodo = (
-    id: number,
-    params: UpdateTodoParams
-  ): Effect.Effect<never, Cause.NoSuchElementException, Todo> =>
-    Ref.get(todosRef).pipe(Effect.flatMap((map) => {
-      const maybeTodo = HashMap.get(map, id)
-      if (Option.isNone(maybeTodo)) {
-        return Effect.fail(new Cause.NoSuchElementException())
-      }
-      const newTodo = new Todo({ ...maybeTodo.value, ...params })
-      const updated = HashMap.set(map, id, newTodo)
-      return Ref.set(todosRef, updated).pipe(Effect.as(newTodo))
-    }))
-
-  const deleteTodo = (id: number): Effect.Effect<never, never, boolean> =>
-    Ref.get(todosRef).pipe(Effect.flatMap((map) =>
-      HashMap.has(map, id)
-        ? Ref.set(todosRef, HashMap.remove(map, id)).pipe(Effect.as(true))
-        : Effect.succeed(false)
-    ))
-
-  return {
-    getTodo,
-    getTodos,
-    createTodo,
-    updateTodo,
-    deleteTodo
-  } as const
-})
-
-interface TodoRepository {
-  readonly _: unique symbol
-}
-
-const TodoRepository = Context.Tag<
-  TodoRepository,
-  Effect.Effect.Success<typeof makeTodoRepository>
->()
-
-const TodoRepositoryLive = Layer.effect(TodoRepository, makeTodoRepository)
-
-// =============================================================================
-// Express
-// =============================================================================
-
-const Express = Context.Tag<ReturnType<typeof express>>()
-
-const ExpressLive = Layer.sync(Express, () => {
-  const app = express()
-  app.use(bodyParser.json())
-  return app
-})
+const ServerLive = Layer.scopedDiscard(
+  Effect.gen(function*(_) {
+    // Start an Express server on your local host machine
+    //  - Hint: you may want to consider utilizing `Runtime` given this is an execution boundary
+    //  - Hint: starting / stopping the Express server is a resourceful operation
+    return yield* _(Effect.unit)
+  })
+)
 
 // =============================================================================
 // Routes
@@ -179,17 +114,95 @@ const DeleteTodoRouteLive = Layer.scopedDiscard(Effect.gen(function*(_) {
 }))
 
 // =============================================================================
-// Server
+// Todo
 // =============================================================================
 
-const ServerLive = Layer.scopedDiscard(
-  Effect.gen(function*(_) {
-    const port = 3001
-    // Start an express server on the provided port (can modify the port if necessary on your machine)
-    //  - Hint: you may want to consider utilizing `Runtime` given this is an execution boundary
-    //  - Hint: starting / stopping the Express server is a resourceful operation
+class Todo extends Schema.Class<Todo>()({
+  id: Schema.number,
+  title: Schema.string,
+  completed: Schema.boolean
+}) {}
+
+const CreateTodoParams = Todo.struct.pipe(Schema.omit("id"))
+type CreateTodoParams = Schema.Schema.To<typeof CreateTodoParams>
+
+const UpdateTodoParams = Todo.struct.pipe(Schema.omit("id"), Schema.partial)
+type UpdateTodoParams = Schema.Schema.To<typeof UpdateTodoParams>
+
+// =============================================================================
+// TodoRepository
+// =============================================================================
+
+const makeTodoRepository = Effect.gen(function*(_) {
+  const nextIdRef = yield* _(Ref.make(0))
+  const todosRef = yield* _(Ref.make(HashMap.empty<number, Todo>()))
+
+  const getTodo = (id: number): Effect.Effect<Option.Option<Todo>> =>
+    Ref.get(todosRef).pipe(Effect.map(HashMap.get(id)))
+
+  const getTodos: Effect.Effect<ReadonlyArray<Todo>> = Ref.get(todosRef).pipe(
+    Effect.map((map) => ReadonlyArray.fromIterable(HashMap.values(map)))
+  )
+
+  const createTodo = (params: CreateTodoParams): Effect.Effect<number> =>
+    Ref.getAndUpdate(nextIdRef, (n) => n + 1).pipe(
+      Effect.flatMap((id) =>
+        Ref.modify(todosRef, (map) => {
+          const newTodo = new Todo({ ...params, id })
+          const updated = HashMap.set(map, newTodo.id, newTodo)
+          return [newTodo.id, updated]
+        })
+      )
+    )
+
+  const updateTodo = (
+    id: number,
+    params: UpdateTodoParams
+  ): Effect.Effect<Todo, Cause.NoSuchElementException> =>
+    Ref.get(todosRef).pipe(Effect.flatMap((map) => {
+      const maybeTodo = HashMap.get(map, id)
+      if (Option.isNone(maybeTodo)) {
+        return Effect.fail(new Cause.NoSuchElementException())
+      }
+      const newTodo = new Todo({ ...maybeTodo.value, ...params })
+      const updated = HashMap.set(map, id, newTodo)
+      return Ref.set(todosRef, updated).pipe(Effect.as(newTodo))
+    }))
+
+  const deleteTodo = (id: number): Effect.Effect<boolean> =>
+    Ref.get(todosRef).pipe(Effect.flatMap((map) =>
+      HashMap.has(map, id)
+        ? Ref.set(todosRef, HashMap.remove(map, id)).pipe(Effect.as(true))
+        : Effect.succeed(false)
+    ))
+
+  return {
+    getTodo,
+    getTodos,
+    createTodo,
+    updateTodo,
+    deleteTodo
+  } as const
+})
+
+class TodoRepository extends Context.Tag("TodoRepository")<
+  TodoRepository,
+  Effect.Effect.Success<typeof makeTodoRepository>
+>() {
+  static readonly Live = Layer.effect(TodoRepository, makeTodoRepository)
+}
+
+// =============================================================================
+// Express
+// =============================================================================
+
+class Express extends Context.Tag("Express")<Express, ReturnType<typeof express>>() {
+  static readonly Live = Layer.sync(Express, () => {
+    const app = express()
+    app.use(bodyParser.json())
+    return app
   })
-)
+}
 
 // =============================================================================
 // Program
@@ -201,25 +214,8 @@ const MainLive = ServerLive.pipe(
   Layer.merge(CreateTodoRouteLive),
   Layer.merge(UpdateTodoRouteLive),
   Layer.merge(DeleteTodoRouteLive),
-  Layer.provide(ExpressLive),
-  Layer.provide(TodoRepositoryLive)
+  Layer.provide(Express.Live),
+  Layer.provide(TodoRepository.Live)
 )
 
 Effect.runFork(Layer.launch(MainLive))
-
-// Some useful cURL commands for testing your server:
-//
-// Query a Todo by ID:
-//   curl -X GET http://localhost:3001/todos/0
-//
-// Query all Todos:
-//   curl -X GET http://localhost:3001/todos
-//
-// Create a Todo:
-//   curl -X POST -H 'Content-Type: application/json' -d '{"title":"mytodo","completed":false}' http://localhost:3001/todos
-//
-// Update a Todo:
-//   curl -X PUT -H 'Content-Type: application/json' -d '{"completed":true}' http://localhost:3001/todos/0
-//
-// Delete a Todo by ID:
-//   curl -X DELETE http://localhost:3001/todos/0

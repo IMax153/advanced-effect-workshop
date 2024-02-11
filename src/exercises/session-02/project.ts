@@ -53,7 +53,7 @@ import { Context, Effect, Layer } from "effect"
 //   - The `RateLimiter`'s worker should be forked into a background process
 
 export interface RateLimiter {
-  readonly take: Effect.Effect<never, never, void>
+  readonly take: Effect.Effect<void>
 }
 
 export declare namespace RateLimiter {
@@ -61,13 +61,13 @@ export declare namespace RateLimiter {
     readonly make: (
       limit: number,
       window: Duration.DurationInput
-    ) => Effect.Effect<Scope.Scope, never, RateLimiter>
+    ) => Effect.Effect<RateLimiter, never, Scope.Scope>
   }
 }
 
-export const Factory = Context.Tag<RateLimiter.Factory>()
-
-export const FactoryLive = Layer.sync(Factory, () => factory)
+class Factory extends Context.Tag("RateLimiter.Factory")<Factory, RateLimiter.Factory>() {
+  static readonly Live = Layer.sync(Factory, () => factory)
+}
 
 export const make = Effect.serviceFunctionEffect(Factory, (factory) => factory.make)
 

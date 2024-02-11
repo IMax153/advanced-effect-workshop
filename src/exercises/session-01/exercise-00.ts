@@ -9,14 +9,14 @@ import { Effect } from "effect"
 
 export const MAX_SET_TIMEOUT_MILLIS = 2 ** 31 - 1
 
-const sleep = (millis: number): Effect.Effect<never, never, void> =>
-  // Implement the logic to suspend the fiber for the specified number of
-  // milliseconds before allowing execution to resume. Your implementation should:
-  //   - utilize `setTimeout` to implement the delay
-  //   - utilize the `Effect.async*` combinators to handle the `setTimeout` callback
-  // Bonus:
-  //   - for bonus points, your implementation should also properly handle if the
-  //     fiber that is sleeping is interrupted
+declare const sleep: (millis: number) => Effect.Effect<void>
+// Implement the logic to suspend the fiber for the specified number of
+// milliseconds before allowing execution to resume. Your implementation should:
+//   - utilize `setTimeout` to implement the delay
+//   - utilize the `Effect.async*` combinators to handle the `setTimeout` callback
+// Bonus:
+//   - for bonus points, your implementation should also properly handle if the
+//     fiber that is sleeping is interrupted
 
 const program = Effect.gen(function*(_) {
   const millis = 1_000
