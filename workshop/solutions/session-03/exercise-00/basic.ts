@@ -2,12 +2,12 @@ import { Schema } from "@effect/schema"
 import {
   Console,
   Context,
+  Data,
   Effect,
   Layer,
   ReadonlyArray,
   Request,
-  RequestResolver,
-  Schedule
+  RequestResolver
 } from "effect"
 import { gql, GraphQLClient } from "graphql-request"
 
@@ -24,10 +24,12 @@ const makePokemonRepo = Effect.gen(function*(_) {
     Effect.gen(function*(_) {
       const ids = ReadonlyArray.map(requests, (request) => request.id)
       const pokemons = yield* _(pokemonApi.getByIds(ids))
-      yield* _(Effect.forEach(requests, (request) => {
-        const pokemon = pokemons.find((pokemon) => pokemon.id === request.id)!
-        return Request.completeEffect(request, Effect.succeed(pokemon))
-      }, { discard: true }))
+      const pokemonMap = new Map(ReadonlyArray.map(pokemons, (pokemon) => [pokemon.id, pokemon]))
+      yield* _(Effect.forEach(
+        requests,
+        (request) => Request.succeed(request, pokemonMap.get(request.id)!),
+        { discard: true }
+      ))
     }).pipe(
       Effect.catchAll((error) =>
         Effect.forEach(requests, (request) => Request.completeEffect(request, error))
@@ -35,11 +37,7 @@ const makePokemonRepo = Effect.gen(function*(_) {
     )
   )
 
-  const getById = (id: number) =>
-    Effect.request(
-      new GetPokemonById({ id }),
-      GetPokemonByIdResolver
-    )
+  const getById = (id: number) => Effect.request(new GetPokemonById({ id }), GetPokemonByIdResolver)
 
   return { getById } as const
 })
@@ -55,22 +53,20 @@ export class PokemonRepo extends Context.Tag("PokemonRepo")<
 // Pokemon Models
 // =============================================================================
 
-export class PokemonError extends Schema.TaggedError<PokemonError>()(
-  "PokemonError",
-  { message: Schema.string }
-) {}
+export class PokemonError extends Data.TaggedError("PokemonError")<{
+  readonly message: string
+}> {}
 
-export class Pokemon extends Schema.Class<Pokemon>()({
-  id: Schema.number,
-  name: Schema.string
-}) {}
+export class Pokemon extends Data.Class<{
+  readonly id: number
+  readonly name: string
+}> {}
 
-export class GetPokemonById extends Schema.TaggedRequest<GetPokemonById>()(
-  "GetPokemonById",
+export class GetPokemonById extends Request.TaggedClass("GetPokemonById")<
   PokemonError,
   Pokemon,
-  { id: Schema.number }
-) {}
+  { readonly id: number }
+> {}
 
 // =============================================================================
 // PokemonApi
@@ -107,11 +103,16 @@ const makePokemonApi = Effect.sync(() => {
       Effect.flatMap(
         Schema.decodeUnknown(
           Schema.struct({
-            pokemon_v2_pokemon: Schema.array(Pokemon)
+            pokemon_v2_pokemon: Schema.array(Schema.struct({
+              id: Schema.number,
+              name: Schema.string
+            }))
           })
         )
       ),
-      Effect.map((response) => response.pokemon_v2_pokemon),
+      Effect.map((response) =>
+        ReadonlyArray.map(response.pokemon_v2_pokemon, (params) => new Pokemon(params))
+      ),
       Effect.catchTag("ParseError", (e) => Effect.fail(new PokemonError({ message: e.toString() })))
     )
 
@@ -132,14 +133,16 @@ class PokemonApi extends Context.Tag("PokemonApi")<
 const program = Effect.gen(function*(_) {
   const repo = yield* _(PokemonRepo)
 
-  yield* _(
+  const pokemon = yield* _(
     Effect.forEach(ReadonlyArray.range(1, 100), repo.getById, {
       // Toggle batching on and off to see time difference
       batching: true
     }),
-    Effect.tap((pokemon) => Console.log(`Got ${pokemon.length} pokemon`)),
-    Effect.repeat(Schedule.fixed("2 seconds"))
+    Effect.timed,
+    Effect.map(([duration, pokemon]) => ({ duration: duration.toString(), pokemon }))
   )
+
+  yield* _(Console.log(pokemon))
 })
 
 const MainLive = PokemonRepo.Live.pipe(

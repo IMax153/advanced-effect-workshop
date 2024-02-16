@@ -1,6 +1,11 @@
 {
-  "include": [],
+  "include": [
+    "exercises",
+    "samples",
+    "solutions"
+  ],
   "compilerOptions": {
+    "tsBuildInfoFile": ".tsbuildinfo/build.tsbuildinfo",
     "strict": true,
     "moduleDetection": "force",
     "downlevelIteration": true,
@@ -11,7 +16,10 @@
     "emitDecoratorMetadata": false,
     "experimentalDecorators": true,
     "moduleResolution": "NodeNext",
-    "lib": ["ES2022", "DOM"],
+    "lib": [
+      "ES2022",
+      "DOM"
+    ],
     "isolatedModules": true,
     "sourceMap": true,
     "noImplicitReturns": false,
@@ -33,7 +41,9 @@
     "module": "NodeNext",
     "incremental": true,
     "removeComments": false,
-    "types": ["node"],
+    "types": [
+      "node"
+    ],
     "plugins": [
       {
         "name": "@effect/language-service"
