@@ -20,8 +20,8 @@ const makeBatchedLogger = (config: {
       outputBuffer,
       Effect.schedule(schedule),
       Effect.ensuring(outputBuffer),
-      Effect.interruptible,
-      Effect.fork
+      Effect.fork,
+      Effect.interruptible
     )
 
     const logger = Logger.stringLogger.pipe(Logger.map((message) => {

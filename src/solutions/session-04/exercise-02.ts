@@ -12,7 +12,6 @@ import {
   Layer,
   Metric,
   MetricLabel,
-  ReadonlyArray,
   Runtime,
   RuntimeFlags,
   Schedule
@@ -149,14 +148,3 @@ const runtime = Runtime.defaultRuntime.pipe(
 Layer.launch(MainLive).pipe(
   Runtime.runFork(runtime)
 )
-
-// Some useful cURL commands for testing your server:
-//
-// Request the root endpoint:
-//   curl -X GET "http://127.0.0.1:8888"
-//
-// Request the health endpoint:
-//   curl -X GET "http://127.0.0.1:8888/healthz"
-//
-// Request the metrics endpoint:
-//   curl -X GET "http://127.0.0.1:8888/metrics"

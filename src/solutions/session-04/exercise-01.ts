@@ -48,22 +48,20 @@ const MetricReporterLive = Layer.scopedDiscard(Effect.gen(function*(_) {
 }))
 
 const program = Effect.gen(function*(_) {
-  yield* _(
-    Effect.log("Logging..."),
-    Effect.schedule(Schedule.jitteredWith(
-      Schedule.spaced("1 seconds"),
-      { min: 0.5, max: 1.5 }
-    )),
-    Effect.fork
-  )
-  yield* _(
-    Effect.logError("Logging an error..."),
-    Effect.schedule(Schedule.jitteredWith(
-      Schedule.spaced("1 seconds"),
-      { min: 0.5, max: 1.5 }
-    )),
-    Effect.fork
-  )
+  yield* _(Effect.all([
+    Effect.log("Logging...").pipe(
+      Effect.schedule(Schedule.jitteredWith(
+        Schedule.spaced("1 seconds"),
+        { min: 0.5, max: 1.5 }
+      ))
+    ),
+    Effect.logError("Logging an error...").pipe(
+      Effect.schedule(Schedule.jitteredWith(
+        Schedule.spaced("1 seconds"),
+        { min: 0.5, max: 1.5 }
+      ))
+    )
+  ], { concurrency: "unbounded" }))
 })
 
 const MainLive = MetricReporterLive.pipe(
