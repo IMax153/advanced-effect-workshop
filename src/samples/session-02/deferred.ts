@@ -3,7 +3,7 @@ import { Console, Deferred, Effect, Fiber } from "effect"
 const program = Effect.gen(function*(_) {
   // Create a deferred which can never fail and succeeds
   // with a string
-  const deferred = yield* _(Deferred.make<never, string>())
+  const deferred = yield* _(Deferred.make<string>())
   // Fork a fiber which will await the result of the deferred
   const fiber = yield* _(Effect.fork(Deferred.await(deferred)))
   // Succeed the deferred after 1 second

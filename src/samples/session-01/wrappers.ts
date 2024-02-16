@@ -39,7 +39,7 @@ export const flexibleApproach = (options: OpenAIOptions) =>
 
     const call = <A>(
       f: (client: OpenAIApi, signal: AbortSignal) => Promise<A>
-    ): Effect.Effect<never, OpenAIError, A> =>
+    ): Effect.Effect<A, OpenAIError> =>
       Effect.tryPromise({
         try: (signal) => f(client, signal),
         catch: (error) => new OpenAIError({ error })
@@ -60,7 +60,7 @@ export const comboApproach = (options: OpenAIOptions) =>
 
     const call = <A>(
       f: (client: OpenAIApi, signal: AbortSignal) => Promise<A>
-    ): Effect.Effect<never, OpenAIError, A> =>
+    ): Effect.Effect<A, OpenAIError> =>
       Effect.tryPromise({
         try: (signal) => f(client, signal),
         catch: (error) => new OpenAIError({ error })
@@ -105,7 +105,7 @@ export const comboApproach = (options: OpenAIOptions) =>
 // Internals
 // =============================================================================
 
-const getClient = (options: OpenAIOptions): Effect.Effect<never, never, OpenAIApi> =>
+const getClient = (options: OpenAIOptions): Effect.Effect<OpenAIApi> =>
   Effect.sync(() =>
     new OpenAIApi({
       apiKey: Secret.value(options.apiKey),

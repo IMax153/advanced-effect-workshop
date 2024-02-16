@@ -126,7 +126,7 @@ class Todo extends Schema.Class<Todo>()({
 const CreateTodoParams = Todo.struct.pipe(Schema.omit("id"))
 type CreateTodoParams = Schema.Schema.To<typeof CreateTodoParams>
 
-const UpdateTodoParams = Todo.struct.pipe(Schema.omit("id"), Schema.partial)
+const UpdateTodoParams = Schema.partial(Todo.struct, { exact: true }).pipe(Schema.omit("id"))
 type UpdateTodoParams = Schema.Schema.To<typeof UpdateTodoParams>
 
 // =============================================================================

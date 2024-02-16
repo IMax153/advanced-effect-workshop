@@ -43,7 +43,7 @@ const ServerLive = Layer.scopedDiscard(
 
 const GetTodoRouteLive = Layer.scopedDiscard(Effect.gen(function*(_) {
   const app = yield* _(Express)
-  const runFork = yield* _(FiberSet.makeRuntime<void, never, TodoRepository>())
+  const runFork = yield* _(FiberSet.makeRuntime<TodoRepository>())
   app.get("/todos/:id", (req, res) => {
     const id = req.params.id
     const program = TodoRepository.pipe(
@@ -60,7 +60,7 @@ const GetTodoRouteLive = Layer.scopedDiscard(Effect.gen(function*(_) {
 
 const GetAllTodosRouteLive = Layer.scopedDiscard(Effect.gen(function*(_) {
   const app = yield* _(Express)
-  const runFork = yield* _(FiberSet.makeRuntime<void, never, TodoRepository>())
+  const runFork = yield* _(FiberSet.makeRuntime<TodoRepository>())
   app.get("/todos", (_, res) => {
     const program = TodoRepository.pipe(
       Effect.flatMap((repo) => repo.getTodos),
@@ -73,7 +73,7 @@ const GetAllTodosRouteLive = Layer.scopedDiscard(Effect.gen(function*(_) {
 
 const CreateTodoRouteLive = Layer.scopedDiscard(Effect.gen(function*(_) {
   const app = yield* _(Express)
-  const runFork = yield* _(FiberSet.makeRuntime<void, never, TodoRepository>())
+  const runFork = yield* _(FiberSet.makeRuntime<TodoRepository>())
   app.post("/todos", (req, res) => {
     const decodeBody = Schema.decodeUnknown(CreateTodoParams)
     const program = TodoRepository.pipe(
@@ -94,7 +94,7 @@ const CreateTodoRouteLive = Layer.scopedDiscard(Effect.gen(function*(_) {
 
 const UpdateTodoRouteLive = Layer.scopedDiscard(Effect.gen(function*(_) {
   const app = yield* _(Express)
-  const runFork = yield* _(FiberSet.makeRuntime<void, never, TodoRepository>())
+  const runFork = yield* _(FiberSet.makeRuntime<TodoRepository>())
   app.put("/todos/:id", (req, res) => {
     const id = req.params.id
     const decodeBody = Schema.decodeUnknown(UpdateTodoParams)
@@ -121,7 +121,7 @@ const UpdateTodoRouteLive = Layer.scopedDiscard(Effect.gen(function*(_) {
 
 const DeleteTodoRouteLive = Layer.scopedDiscard(Effect.gen(function*(_) {
   const app = yield* _(Express)
-  const runFork = yield* _(FiberSet.makeRuntime<void, never, TodoRepository>())
+  const runFork = yield* _(FiberSet.makeRuntime<TodoRepository>())
   app.delete("/todo/:id", (req, res) => {
     const id = req.params.id
     const program = TodoRepository.pipe(
@@ -146,7 +146,7 @@ class Todo extends Schema.Class<Todo>()({
 const CreateTodoParams = Todo.struct.pipe(Schema.omit("id"))
 type CreateTodoParams = Schema.Schema.To<typeof CreateTodoParams>
 
-const UpdateTodoParams = Todo.struct.pipe(Schema.omit("id"), Schema.partial)
+const UpdateTodoParams = Schema.partial(Todo.struct, { exact: true }).pipe(Schema.omit("id"))
 type UpdateTodoParams = Schema.Schema.To<typeof UpdateTodoParams>
 
 // =============================================================================

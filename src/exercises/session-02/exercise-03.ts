@@ -13,7 +13,7 @@ import { Chunk, Console, Data, Effect, Stream } from "effect"
 declare const watch: (
   directory: string,
   options?: ParcelWatcher.Options
-) => Stream.Stream<never, FileWatcherError, FileSystemEvent>
+) => Stream.Stream<FileSystemEvent, FileWatcherError>
 // Complete the implementation of `watch`. Your implementation should:
 //   - Properly manage the subscription resource returned from `ParcelWatcher.subscribe`
 //   - Write file system events emitted by the subscription into a `Queue`
@@ -30,7 +30,7 @@ watch("./src").pipe(
 // declare const watchStream: (
 //   directory: string,
 //   options?: ParcelWatcher.Options
-// ) => Stream.Stream<never, FileWatcherError, FileSystemEvent> =>
+// ) => Stream.Stream<FileSystemEvent, FileWatcherError> =>
 
 // =============================================================================
 // File Watcher Models
