@@ -8,6 +8,8 @@ The goal of this workshop is to explore advanced patterns and strategies that we
 
 To be able to participate in the workshop exercises, it is best that you clone the project.
 
+Once cloned, all of the content relevant to the workshop can be found under the [workshop](workshop/) directory.
+
 There are three primary methods which you can use to get access to this project:
 
 | Method                                                                                                                                                              | Description                                                            |
