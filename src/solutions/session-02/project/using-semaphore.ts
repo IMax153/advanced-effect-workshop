@@ -19,7 +19,7 @@ export const make = (
         Effect.runFork(
           Effect.sleep(window).pipe(
             Effect.zipRight(Ref.set(resetRef, Option.none())),
-            Effect.zipRight(semaphore.releaseAll)
+            Effect.zipLeft(semaphore.releaseAll)
           ),
           { scope }
         )

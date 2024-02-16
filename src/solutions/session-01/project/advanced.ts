@@ -134,16 +134,7 @@ export const makeExpress = <R>(
         EffectRequestHandler<any, any, any, any, any, any>
       >
     >(handlers: Handlers) =>
-      Effect.runtime<
-        Effect.Effect.Context<
-          {
-            [k in keyof Handlers]: [Handlers[k]] extends [
-              EffectRequestHandler<infer R, any, any, any, any, any>
-            ] ? Effect.Effect<void, never, R>
-              : never
-          }[number]
-        >
-      >().pipe(
+      Effect.runtime<Effect.Effect.Context<ReturnType<Handlers[number]>>>().pipe(
         Effect.map((runtime) =>
           ReadonlyArray.map(handlers, (handler): express.RequestHandler => (req, res, next) =>
             Runtime.runFork(runtime)(
@@ -245,14 +236,7 @@ const match = (method: Methods) =>
   void,
   never,
   | Express
-  | Effect.Effect.Context<
-    {
-      [k in keyof Handlers]: [Handlers[k]] extends [
-        EffectRequestHandler<infer R, any, any, any, any, any>
-      ] ? Effect.Effect<void, never, R>
-        : never
-    }[number]
-  >
+  | Effect.Effect.Context<ReturnType<Handlers[number]>>
 > =>
   withExpressRuntime(handlers).pipe(
     Effect.flatMap((handlers) =>
@@ -303,14 +287,7 @@ export function use<
   void,
   never,
   | Express
-  | Effect.Effect.Context<
-    {
-      [k in keyof Handlers]: [Handlers[k]] extends [
-        EffectRequestHandler<infer R, any, any, any, any, any>
-      ] ? Effect.Effect<void, never, R>
-        : never
-    }[number]
-  >
+  | Effect.Effect.Context<ReturnType<Handlers[number]>>
 >
 export function use<
   Handlers extends ReadonlyArray.NonEmptyReadonlyArray<
@@ -323,14 +300,7 @@ export function use<
   void,
   never,
   | Express
-  | Effect.Effect.Context<
-    {
-      [k in keyof Handlers]: [Handlers[k]] extends [
-        EffectRequestHandler<infer R, any, any, any, any, any>
-      ] ? Effect.Effect<void, never, R>
-        : never
-    }[number]
-  >
+  | Effect.Effect.Context<ReturnType<Handlers[number]>>
 >
 export function use(...args: Array<any>): Effect.Effect<void, never, Express> {
   return withExpressApp((app) => {
@@ -363,7 +333,7 @@ class Todo extends Schema.Class<Todo>()({
 const CreateTodoParams = Todo.struct.pipe(Schema.omit("id"))
 type CreateTodoParams = Schema.Schema.To<typeof CreateTodoParams>
 
-const UpdateTodoParams = Todo.struct.pipe(Schema.omit("id"), Schema.partial)
+const UpdateTodoParams = Schema.partial(Todo.struct, { exact: true }).pipe(Schema.omit("id"))
 type UpdateTodoParams = Schema.Schema.To<typeof UpdateTodoParams>
 
 // =============================================================================

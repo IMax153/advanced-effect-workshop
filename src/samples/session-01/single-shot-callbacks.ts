@@ -10,7 +10,7 @@ export class ReadFileError extends Data.TaggedError("ReadFileError")<{
 }> {}
 
 export const readFile = (path: fs.PathOrFileDescriptor) =>
-  Effect.async<never, ReadFileError, Uint8Array>((resume) => {
+  Effect.async<Uint8Array, ReadFileError>((resume) => {
     fs.readFile(path, (error, data) => {
       if (error) {
         resume(Effect.fail(new ReadFileError({ error })))

@@ -6,7 +6,7 @@ import type { EventEmitter } from "node:events"
 // =============================================================================
 
 export const captureEvents = (emitter: EventEmitter, eventName: string) =>
-  Stream.async<never, never, unknown>((emit) => {
+  Stream.async<unknown>((emit) => {
     emitter.on(eventName, (data) => {
       emit.single(data)
     })
