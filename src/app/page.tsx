@@ -24,15 +24,13 @@ const Slides: React.FC = () => {
   const codeExercises = {
     sessionOne: {
       exerciseZero: `
-declare const sleep: (
-  millis: number
-) => Effect.Effect<void>
+declare const sleep: (millis: number) => Effect<void>
       `,
       exerciseOne: `
 declare const captureEvents: (
   emitter: EventEmitter,
   eventName: string
-) => Stream.Stream<Event, EmissionError>
+) => Stream<Event, EmissionError>
       `
     },
     sessionTwo: {
@@ -53,16 +51,21 @@ export const doSomeWork = (value: number) =>
       exerciseZero: `
 const GetPokemonByIdResolver = RequestResolver.makeBatched((
   requests: ReadonlyArray<GetPokemonById>
-) => {
-  // Implementation
-})
+) => { /* Implementation */ })
       `,
       exerciseOne: `
-import { Cache } from "effect"
+import { Data, Effect } from "effect"
 
-declare const cache: Cache.Cache<number, PokemonError, Pokemon>
+class Job extends Data.Class<{
+  readonly id: number
+  readonly text: string
+}> {}
 
-const getById = (id: number) => cache.get(id)
+const executeJob = (job: Job): Effect.Effect<void> =>
+  Effect.log(\`Running job \${job.id}...\`).pipe(
+    Effect.zipRight(Effect.sleep(\`\${job.text.length} seconds\`)),
+    Effect.as(job.text.length)
+  )
       `
     },
     sessionFour: {
@@ -130,16 +133,16 @@ import { Data, Effect } from "effect"
 import * as fs from "node:fs"
 
 export const readFile = (path: fs.PathOrFileDescriptor) =>
-Effect.async<never, string, Uint8Array>((resume) => {
-  fs.readFile(path, (error, data) => {
-    if (error) {
-      const message = \`Failed to read file at path \${path}\`
-      resume(Effect.fail(message))
-    } else {
-      resume(Effect.succeed(data))
-    }
+  Effect.async<Uint8Array, string>((resume) => {
+    fs.readFile(path, (error, data) => {
+      if (error) {
+        const message = \`Failed to read file at path \${path}\`
+        resume(Effect.fail(message))
+      } else {
+        resume(Effect.succeed(data))
+      }
+    })
   })
-})
       `,
       streamAsync: `
 import { Stream } from "effect"
@@ -148,8 +151,8 @@ import type { EventEmitter } from "node:events"
 export const captureEvents = (
   emitter: EventEmitter,
   eventName: string
-  ) =>
-  Stream.async<never, never, unknown>((emit) => {
+) =>
+  Stream.async<unknown>((emit) => {
     emitter.on(eventName, (data) => {
       emit.single(data)
     })
@@ -161,13 +164,14 @@ export const captureEvents = (
 import { Console, Deferred, Effect, Fiber } from "effect"
 
 const program = Effect.gen(function*(_) {
-  const deferred = yield* _(Deferred.make<never, string>())
+  const deferred = yield* _(Deferred.make<string>())
 
   const fiber = yield* _(Effect.fork(Deferred.await(deferred)))
 
   yield* _(
     Deferred.succeed(deferred, "Hello, World!"),
-    Effect.delay("1 seconds")
+    Effect.delay("1 seconds"),
+    Effect.fork
   )
 
   const result = yield* _(Fiber.join(fiber))
@@ -225,10 +229,30 @@ class GetTodoById extends Request.TaggedClass("GetTodoById")<
 import { RequestResolver } from "effect"
 import { GetTodoById, Todo, TodoError } from "./Todo"
 
-declare const getTodoById: Effect.Effect<Todo, TodoError>
+declare const getById: (id: number) => Effect.Effect<Todo, TodoError>
 
 const GetTodoByIdResolver = RequestResolver.fromEffect(
   (request: GetTodoById) => getTodoById(request.id)
+)
+      `,
+      requestResolverBatched: `
+import { RequestResolver } from "effect"
+import { GetTodoById, Todo, TodoError } from "./Todo"
+
+declare const getByIds: (ids: ReadonlyArray<number>) => Effect.Effect<
+  ReadonlyArray<Todo>,
+  TodoError
+>
+
+const GetTodoByIdResolver = RequestResolver.makeBatched(
+  (requests: ReadonlyArray<GetTodoById>) => {
+    const ids = ReadonlyArray.map(requests, (request) => request.id)
+    const todos = yield* _(getByIds(ids))
+    yield* _(Effect.forEach(requests, (request) => {
+      const todo = todos.find((todo) => todo.id === request.id)!
+      return Request.succeed(request, todo)
+    }, { discard: true }))
+  }
 )
       `,
       requestCache: `
@@ -276,6 +300,9 @@ export interface Logger<Message, Output> {
     readonly date: Date
   }): Output
 }
+      `,
+      metric: `
+interface Metric<Type, In, Out> {}
       `,
       counter: `
 import { Metric } from "effect"
@@ -426,7 +453,7 @@ const program = Effect.log("Some event occurred!").pipe(
           </p>
           <ul className="prose-2xl">
             <li>Clone and setup the project locally (optionally via Nix & Direnv)</li>
-            <li>Open the project in Gitpod</li>
+            <li>Open the project in Gitpod (recommended)</li>
             <li>Open the project in Stackblitz</li>
           </ul>
           <p className="font-bold italic">Example Application</p>
@@ -676,8 +703,6 @@ const program = Effect.log("Some event occurred!").pipe(
             </td>
           </tr>
         </table>
-        <p className="text-3xl">Both methods can optionally return a cleanup Effect.</p>
-        <p className="text-3xl">The cleanup will be run when the fiber is interrupted.</p>
       </section>
 
       <section>
@@ -910,7 +935,7 @@ const program = Effect.log("Some event occurred!").pipe(
       <section>
         <h3>Deferred Example</h3>
         <div className="flex justify-center">
-          <CodeSample className="text-sm" lineNumbers="|4|6|8-11|13|15|19">
+          <CodeSample className="text-sm" lineNumbers="|4|6|8-12|14|16|20">
             {codeExamples.sessionTwo.deferred}
           </CodeSample>
         </div>
@@ -918,7 +943,7 @@ const program = Effect.log("Some event occurred!").pipe(
 
       <section>
         <h3>Deferred Example</h3>
-        <div className="mt-12 flex justify-center">
+        <div className="flex justify-center">
           <Image
             src={Deferred}
             alt="A diagram which demonstrates how a Deferred can be used to force a Fiber to wait for some condition to occur"
@@ -1255,9 +1280,18 @@ const program = Effect.log("Some event occurred!").pipe(
 
       <section>
         <h3>Resolving a Request</h3>
-        <div className="flex justify-center">
-          <CodeSample lineNumbers="|6|7">
+        <div className="flex justify-center text-4xl">
+          <CodeSample lineNumbers="|4|6|7">
             {codeExamples.sessionThree.requestResolverUnbatched}
+          </CodeSample>
+        </div>
+      </section>
+
+      <section>
+        <h3>Batching Requests</h3>
+        <div className="flex justify-center text-4xl">
+          <CodeSample lineNumbers="|4-6|9|10|11-16">
+            {codeExamples.sessionThree.requestResolverBatched}
           </CodeSample>
         </div>
       </section>
@@ -1282,8 +1316,7 @@ const program = Effect.log("Some event occurred!").pipe(
           </p>
           <ul className="text-2xl !ml-12">
             <li>
-              You should use a <InlineCode>Request.complete*</InlineCode>{" "}
-              method to complete each request
+              You should complete each <InlineCode>Request</InlineCode> manually
             </li>
           </ul>
         </div>
@@ -1344,28 +1377,22 @@ const program = Effect.log("Some event occurred!").pipe(
             <span className="font-bold underline">Goal</span>:
           </p>
           <p className="text-2xl">
-            The goal of this exercise is to take our Pokemon API example and re-implement{" "}
-            <InlineCode>PokemonRepo.getById</InlineCode> using a <InlineCode>Cache</InlineCode>.
+            The goal of this exercise is to implement a <InlineCode>Cache</InlineCode> which:
           </p>
-          <p className="text-2xl">
-            The requirements of the exercise are to implement a <InlineCode>Cache</InlineCode>{" "}
-            which:
-          </p>
-          <ul className="text-2xl !ml-12">
-            <li>Take a numeric Pokemon identifier as the input key</li>
+          <ul className="text-xl !ml-12">
             <li>
-              Returns the cached result of a <InlineCode>GetPokemonById</InlineCode>{" "}
-              request if possible
+              Caches the result of <InlineCode>executeJob</InlineCode>{" "}
+              so that subsequent calls with the same <InlineCode>Job</InlineCode>{" "}
+              will immediately return the previously computed value
             </li>
             <li>
-              Issues a <InlineCode>GetPokemonById</InlineCode> request if necessary
+              Up to <InlineCode>100</InlineCode> jobs can be cached at a time
+            </li>
+            <li>
+              <InlineCode>Job</InlineCode>s can be run once per day
             </li>
           </ul>
-          <p className="text-2xl">
-            <InlineCode>PokemonRepo.getById</InlineCode> should then just be a{" "}
-            <InlineCode>cache.get</InlineCode>
-          </p>
-          <CodeSample className="text-lg">{codeExercises.sessionThree.exerciseOne}</CodeSample>
+          <CodeSample className="text-base">{codeExercises.sessionThree.exerciseOne}</CodeSample>
         </div>
       </section>
 
@@ -1538,7 +1565,17 @@ const program = Effect.log("Some event occurred!").pipe(
       </section>
 
       <section>
-        <h3>Metrics</h3>
+        <h3>Metric</h3>
+        <CodeSample>{codeExamples.sessionFour.metric}</CodeSample>
+        <p className="text-4xl">
+          Represents a concurrent metric which accepts updates of type <InlineCode>In</InlineCode>
+          {" "}
+          and are aggregated to a stateful value of type <InlineCode>Out</InlineCode>
+        </p>
+      </section>
+
+      <section>
+        <h3>Supported Metrics</h3>
         <div className="text-left mx-16 mt-10">
           <p className="text-2xl">
             Effect has built-in support for five different types of metrics:

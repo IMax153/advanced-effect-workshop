@@ -238,4 +238,7 @@ const MainLive = ServerLive.pipe(
   Layer.provide(TodoRepository.Live)
 )
 
-Effect.runFork(Layer.launch(MainLive))
+Layer.launch(MainLive).pipe(
+  Effect.tapErrorCause(Effect.logError),
+  Effect.runFork
+)

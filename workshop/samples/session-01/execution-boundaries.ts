@@ -1,5 +1,5 @@
 import { Effect, Runtime } from "effect"
-import express from "express"
+import * as express from "express"
 
 // =============================================================================
 // Multi-Shot Callbacks

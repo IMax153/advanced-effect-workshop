@@ -5,14 +5,23 @@ const program = Effect.gen(function*(_) {
   // with a string
   const deferred = yield* _(Deferred.make<string>())
   // Fork a fiber which will await the result of the deferred
-  const fiber = yield* _(Effect.fork(Deferred.await(deferred)))
+  const fiber = yield* _(
+    Effect.log("Waiting for deferred to complete..."),
+    Effect.zipRight(Deferred.await(deferred)),
+    Effect.zipLeft(Effect.log("Deferred complete!")),
+    Effect.fork
+  )
   // Succeed the deferred after 1 second
   yield* _(
-    Deferred.succeed(deferred, "Hello, World!"),
-    Effect.delay("1 seconds")
+    Effect.log("Succeeding the deferred!"),
+    Effect.zipRight(Deferred.succeed(deferred, "Hello, World!")),
+    Effect.delay("1 seconds"),
+    Effect.fork
   )
+  console.time("Fiber waiting")
   // Join the fiber to get its result
   const result = yield* _(Fiber.join(fiber))
+  console.timeEnd("Fiber waiting")
   // Log the result to the console
   yield* _(Console.log(result))
 })

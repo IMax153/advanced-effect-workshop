@@ -73,10 +73,13 @@ import express from "express"
 
 const ServerLive = Layer.scopedDiscard(
   Effect.gen(function*(_) {
+    // =============================================================================
+    // Stage 1
+    // =============================================================================
     // Start an Express server on your local host machine
     //  - Hint: you may want to consider utilizing `Runtime` given this is an execution boundary
     //  - Hint: starting / stopping the Express server is a resourceful operation
-    return yield* _(Effect.unit)
+    return yield* _(Effect.unit) // Delete me
   })
 )
 
@@ -85,11 +88,17 @@ const ServerLive = Layer.scopedDiscard(
 // =============================================================================
 
 const GetTodoRouteLive = Layer.scopedDiscard(Effect.gen(function*(_) {
+  // =============================================================================
+  // Stage 2
+  // =============================================================================
   // Create the `GET /todos/:id` route
   //   - If the todo exists, return the todo as JSON
   //   - If the todo does not exist return a 404 status code with the message `"Todo ${id} not found"`
 }))
 
+// =============================================================================
+// Stage 3
+// =============================================================================
 const GetAllTodosRouteLive = Layer.scopedDiscard(Effect.gen(function*(_) {
   // Create the `GET /todos` route
   //   - Should return all todos from the `TodoRepository`
@@ -218,4 +227,7 @@ const MainLive = ServerLive.pipe(
   Layer.provide(TodoRepository.Live)
 )
 
-Effect.runFork(Layer.launch(MainLive))
+Layer.launch(MainLive).pipe(
+  Effect.tapErrorCause(Effect.logError),
+  Effect.runFork
+)

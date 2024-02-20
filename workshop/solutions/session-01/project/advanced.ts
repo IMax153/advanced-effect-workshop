@@ -473,5 +473,6 @@ const MainLive = Express.Live("127.0.0.1", 8888).pipe(
 server.pipe(
   Effect.zipRight(Effect.never),
   Effect.provide(MainLive),
+  Effect.tapErrorCause(Effect.logError),
   Effect.runFork
 )
