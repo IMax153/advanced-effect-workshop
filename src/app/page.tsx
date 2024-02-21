@@ -566,7 +566,7 @@ const program = Effect.log("Some event occurred!").pipe(
       </section>
 
       <section>
-        <h3>Integrating with External Clients</h3>
+        <h3>Integrating with External APIs</h3>
         <div className="text-left mx-16 mt-10">
           <p className="text-3xl">
             <span className="font-semibold">Option 1</span>: The One-Off Approach
@@ -587,6 +587,10 @@ const program = Effect.log("Some event occurred!").pipe(
             <li className="mx-4">i.e. wrap every client method into Effect</li>
           </ul>
         </div>
+      </section>
+
+      <section>
+        <h2>But how do we actually wrap external APIs with Effect?</h2>
       </section>
 
       <section>
