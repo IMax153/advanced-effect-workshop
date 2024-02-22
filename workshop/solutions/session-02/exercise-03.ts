@@ -32,7 +32,7 @@ export const watch = (
     return Stream.repeatEffectChunk(Effect.flatten(Queue.take(queue)))
   }).pipe(Stream.unwrapScoped)
 
-watch("./src").pipe(
+watch("./workshop").pipe(
   Stream.tap((event) => Console.log(event)),
   Stream.runDrain,
   Effect.runFork
@@ -57,11 +57,11 @@ export const watchStream = (
     )
   )
 
-watchStream("./src").pipe(
-  Stream.tap((event) => Console.log(event)),
-  Stream.runDrain,
-  Effect.runFork
-)
+// watchStream("./workshop").pipe(
+//   Stream.tap((event) => Console.log(event)),
+//   Stream.runDrain,
+//   Effect.runFork
+// )
 
 // =============================================================================
 // File Watcher Models
