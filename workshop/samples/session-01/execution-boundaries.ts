@@ -2,7 +2,7 @@ import { Effect, Runtime } from "effect"
 import * as express from "express"
 
 // =============================================================================
-// Multi-Shot Callbacks
+// Callbacks across Execution Boundaries 
 // =============================================================================
 
 export const startServer = (port: number) =>
